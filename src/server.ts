@@ -4,7 +4,7 @@ import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { validateEnv } from './config/env';
 import { getLogger } from './logger';
-import { setupSecurityMiddleware } from './middleware/security.middleware';
+import { setupSecurityMiddleware, validateWebhook } from './middleware/security.middleware';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { bot } from './bot/bot';
 import adminRouter from './routes/admin';
@@ -113,14 +113,14 @@ app.get('/image/:fileId', async (req, res, next) => {
 // Serve React application in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(process.cwd(), 'web/dist')));
-  app.get('*', (req, res) => {
+  app.get('*', (_req, res) => {
     res.sendFile(path.join(process.cwd(), 'web/dist', 'index.html'));
   });
 }
 
 // Telegram webhook callback mapped to /blog/webhook/ (to match Django config in original)
 const webhookPath = '/blog/webhook/';
-app.post(webhookPath, (req, res, next) => {
+app.post(webhookPath, validateWebhook, (req, res, next) => {
   bot.webhookCallback(webhookPath)(req, res, next);
 });
 

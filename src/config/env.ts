@@ -16,6 +16,7 @@ const envSchema = z.object({
   
   // Webhook
   WEBHOOK_URL: z.string().url().optional(),
+  WEBHOOK_SECRET_TOKEN: z.string().min(16).optional(),
   
   // Admin
   ADMIN_PASSWORD: z.string().min(1, 'ADMIN_PASSWORD is required'),

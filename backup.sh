@@ -10,7 +10,8 @@
 # without deleting old backups
 ################################################################################
 
-set -e
+set -euo pipefail
+trap 'print_error "Backup failed at line $LINENO"; exit 1' ERR
 
 # Colors for output
 RED='\033[0;31m'
@@ -107,10 +108,13 @@ create_backup() {
     print_step "Creating database backup..."
     
     local backup_path="$BACKUP_DIR/$BACKUP_FILE"
+    local temp_path="$BACKUP_DIR/.temp_$BACKUP_FILE"
     
-    # Get database credentials from .env
+    # Get database credentials from .env safely
     if [ -f "$SCRIPT_DIR/.env" ]; then
-        source "$SCRIPT_DIR/.env"
+        set -a
+        . "$SCRIPT_DIR/.env"
+        set +a
     fi
     
     # Extract password from DATABASE_URL if not set
@@ -118,14 +122,29 @@ create_backup() {
         POSTGRES_PASSWORD=$(echo "$DATABASE_URL" | sed -n 's/.*:\([^:]*\)@.*/\1/p')
     fi
     
-    # Create backup using docker exec
-    docker exec salesbot-postgres pg_dump -U postgres salesbot | gzip > "$backup_path"
+    # Check if PostgreSQL container is running
+    if ! docker ps | grep -q salesbot-postgres; then
+        print_error "PostgreSQL container is not running"
+        exit 1
+    fi
     
-    if [ $? -eq 0 ]; then
-        local backup_size=$(du -h "$backup_path" | cut -f1)
-        print_success "Backup created successfully: $backup_file ($backup_size)"
+    # Create backup using docker exec to temp file first
+    print_info "Running pg_dump..."
+    if docker exec salesbot-postgres pg_dump -U postgres --no-owner --no-acl salesbot | gzip > "$temp_path"; then
+        # Verify backup integrity
+        print_info "Verifying backup integrity..."
+        if gzip -t "$temp_path" 2>/dev/null; then
+            mv "$temp_path" "$backup_path"
+            local backup_size=$(du -h "$backup_path" | cut -f1)
+            print_success "Backup created successfully: $BACKUP_FILE ($backup_size)"
+        else
+            print_error "Backup integrity check failed"
+            rm -f "$temp_path"
+            exit 1
+        fi
     else
         print_error "Backup creation failed"
+        rm -f "$temp_path"
         exit 1
     fi
 }
@@ -141,10 +160,19 @@ clean_old_backups() {
     
     local deleted_count=0
     
-    # Find and delete backups older than retention period
+    # Find and delete backups older than retention period, but keep at least 1 backup
+    local backup_count=$(find "$BACKUP_DIR" -name "salesbot_backup_*.sql.gz" -type f | wc -l)
+    
+    if [ $backup_count -le 1 ]; then
+        print_info "Only 1 backup exists, skipping cleanup"
+        return 0
+    fi
+    
     while IFS= read -r -d '' file; do
         print_info "Deleting old backup: $(basename "$file")"
-        rm "$file"
+        # Also delete corresponding metadata file if exists
+        local base_name=$(basename "$file" .sql.gz)
+        rm -f "$file" "$BACKUP_DIR/backup_${base_name#salesbot_backup_}.json"
         deleted_count=$((deleted_count + 1))
     done < <(find "$BACKUP_DIR" -name "salesbot_backup_*.sql.gz" -type f -mtime +$RETENTION_DAYS -print0)
     
@@ -160,6 +188,8 @@ create_metadata() {
     print_step "Creating backup metadata..."
     
     local metadata_file="$BACKUP_DIR/backup_${TIMESTAMP}.json"
+    local checksum=$(sha256sum "$BACKUP_DIR/$BACKUP_FILE" | cut -d' ' -f1)
+    local size_bytes=$(stat -c%s "$BACKUP_DIR/$BACKUP_FILE" 2>/dev/null || stat -f%z "$BACKUP_DIR/$BACKUP_FILE")
     
     cat > "$metadata_file" <<EOF
 {
@@ -168,7 +198,10 @@ create_metadata() {
   "created_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "database": "salesbot",
   "retention_days": $RETENTION_DAYS,
-  "manual_mode": $MANUAL_MODE
+  "manual_mode": $MANUAL_MODE,
+  "sha256_checksum": "$checksum",
+  "size_bytes": $size_bytes,
+  "postgres_version": "$(docker exec salesbot-postgres psql -U postgres -t -c 'SELECT version()' 2>/dev/null | head -1 | xargs)"
 }
 EOF
     

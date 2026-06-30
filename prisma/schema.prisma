@@ -24,6 +24,10 @@ model TelUser {
   customer  Customer?
   favorites Favorite[]
   orders    Order[]
+
+  @@index([username])
+  @@index([isAdmin])
+  @@index([createdAt])
 }
 
 model Customer {
@@ -35,6 +39,10 @@ model Customer {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   user        TelUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([phoneNumber])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model ConfirmChannel {
@@ -44,6 +52,8 @@ model ConfirmChannel {
   inviteLink String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([createdAt])
 }
 
 model VehicleModel {
@@ -53,6 +63,10 @@ model VehicleModel {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   products  Product[]
+
+  @@index([nameUz])
+  @@index([nameRu])
+  @@index([createdAt])
 }
 
 model Product {
@@ -69,6 +83,10 @@ model Product {
   orderItems OrderItem[]
   model      VehicleModel   @relation(fields: [modelId], references: [id], onDelete: Cascade)
   media      ProductMedia[]
+
+  @@index([modelId])
+  @@index([price])
+  @@index([createdAt])
 }
 
 model ProductMedia {
@@ -79,6 +97,10 @@ model ProductMedia {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([fileId])
+  @@index([mediaType])
 }
 
 model Order {
@@ -97,6 +119,12 @@ model Order {
   user              TelUser?       @relation(fields: [userId], references: [id], onDelete: Cascade)
   history           OrderHistory[]
   items             OrderItem[]
+
+  @@index([userId])
+  @@index([phoneNumber])
+  @@index([status])
+  @@index([createdAt])
+  @@index([source])
 }
 
 model OrderHistory {
@@ -145,6 +173,8 @@ model Session {
   chatId    String   @id
   data      String
   updatedAt DateTime @updatedAt
+
+  @@index([updatedAt])
 }
 
 model ActivityLog {
@@ -186,6 +216,8 @@ model UserSession {
   @@index([userId])
   @@index([startTime])
   @@index([source])
+  @@index([ipAddress])
+  @@index([username])
 }
 
 model PageVisit {
@@ -261,6 +293,7 @@ model AdminConfig {
   updatedAt   DateTime @updatedAt
 
   @@index([key])
+  @@index([updatedAt])
 }
 
 model OtpVerification {
@@ -281,4 +314,5 @@ model OtpVerification {
   @@index([otpCode])
   @@index([status])
   @@index([expiresAt])
+  @@index([ipAddress])
 }

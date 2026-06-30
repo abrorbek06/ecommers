@@ -25,12 +25,18 @@ export function createLogger(): pino.Logger {
           },
         }
       : {
+          // Production: JSON structured logging for log aggregation
           formatters: {
             level: (label: string) => {
               return { level: label };
             },
           },
           timestamp: pino.stdTimeFunctions.isoTime,
+          // Redact sensitive information from logs
+          redact: {
+            paths: ['req.headers.authorization', 'req.headers["x-api-key"]', 'BOT_TOKEN', 'ADMIN_PASSWORD'],
+            remove: true,
+          },
         }),
   };
 

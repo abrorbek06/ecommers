@@ -1,0 +1,14 @@
+# Cloudflare Tunnel Configuration
+# This file configures cloudflared to expose your application to the internet
+# without needing a domain or port forwarding
+
+tunnel: <TUNNEL_ID>
+credentials-file: /home/<USER>/.cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  # Route all traffic to your application on port 8000
+  - hostname: <TUNNEL_NAME>.trycloudflare.com
+    service: http://localhost:8000
+  
+  # Catch-all rule to block unmatched requests
+  - service: http_status:404

@@ -1,3 +1,18 @@
+// ⚠️ DEPRECATED: PM2 Configuration
+// 
+// This project uses Docker Compose for production deployment.
+// PM2 should NOT be used in production as it conflicts with Docker container management.
+// 
+// This file is kept only for local development purposes.
+// For production deployment, use: ./one-click.sh
+//
+// To use PM2 locally (development only):
+//   npm run build
+//   npm run pm2:start
+//
+// For production deployment:
+//   ./one-click.sh
+
 module.exports = {
   apps: [
     {
@@ -10,10 +25,6 @@ module.exports = {
       max_memory_restart: '1G',
       env: {
         NODE_ENV: 'development',
-        PORT: 8000,
-      },
-      env_production: {
-        NODE_ENV: 'production',
         PORT: 8000,
       },
       error_file: './logs/pm2-error.log',
@@ -31,16 +42,4 @@ module.exports = {
       shutdown_with_message: true,
     },
   ],
-  deploy: {
-    production: {
-      user: 'node',
-      host: 'your-server.com',
-      ref: 'origin/main',
-      repo: 'git@github.com:abrorbek06/ecommers.git',
-      path: '/var/www/sales-bot',
-      'pre-deploy-local': '',
-      'post-deploy': 'npm install && npm run build && npx prisma generate && npx prisma migrate deploy && pm2 reload ecosystem.config.js --env production',
-      'pre-setup': '',
-    },
-  },
 };
