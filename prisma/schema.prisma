@@ -1,0 +1,284 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+model TelUser {
+  id        BigInt     @id
+  username  String?
+  language  String     @default("uz")
+  isAdmin   Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  customer  Customer?
+  favorites Favorite[]
+  orders    Order[]
+}
+
+model Customer {
+  id          Int      @id @default(autoincrement())
+  userId      BigInt   @unique
+  fullName    String
+  phoneNumber String
+  address     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        TelUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ConfirmChannel {
+  id         Int      @id @default(autoincrement())
+  channelId  String   @unique
+  title      String
+  inviteLink String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model VehicleModel {
+  id        Int       @id @default(autoincrement())
+  nameUz    String
+  nameRu    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+model Product {
+  id         Int            @id @default(autoincrement())
+  modelId    Int
+  nameUz     String
+  nameRu     String
+  descUz     String?
+  descRu     String?
+  price      Float?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  favorites  Favorite[]
+  orderItems OrderItem[]
+  model      VehicleModel   @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  media      ProductMedia[]
+}
+
+model ProductMedia {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  fileId    String
+  mediaType String   @default("photo")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id                Int            @id @default(autoincrement())
+  userId            BigInt?
+  fullName          String
+  phoneNumber       String
+  address           String?
+  totalAmount       Float?
+  status            OrderStatus    @default(PENDING)
+  notes             String?
+  source            String         @default("WEBSITE")
+  telegramMessageId String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  user              TelUser?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  history           OrderHistory[]
+  items             OrderItem[]
+}
+
+model OrderHistory {
+  id          Int          @id @default(autoincrement())
+  orderId     Int
+  oldStatus   OrderStatus?
+  newStatus   OrderStatus
+  changedBy   String?
+  changedById String?
+  notes       String?
+  createdAt   DateTime     @default(now())
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Int      @default(1)
+  price     Float?
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    BigInt
+  productId Int
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      TelUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+model Session {
+  chatId    String   @id
+  data      String
+  updatedAt DateTime @updatedAt
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  userId    BigInt?
+  username  String?
+  eventType String
+  eventData String
+  source    String   @default("TELEGRAM_BOT")
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  sessionId String?
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([source])
+  @@index([sessionId])
+}
+
+model UserSession {
+  id              String    @id @default(cuid())
+  userId          BigInt?
+  username        String?
+  startTime       DateTime  @default(now())
+  endTime         DateTime?
+  durationSeconds Int?
+  pagesVisited    Int       @default(0)
+  productsViewed  Int       @default(0)
+  ordersCreated   Int       @default(0)
+  source          String    @default("TELEGRAM_BOT")
+  deviceType      String?
+  browser         String?
+  ipAddress       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([startTime])
+  @@index([source])
+}
+
+model PageVisit {
+  id              Int       @id @default(autoincrement())
+  userId          BigInt?
+  username        String?
+  sessionId       String?
+  pageUrl         String?
+  pageName        String
+  entryTime       DateTime  @default(now())
+  exitTime        DateTime?
+  durationSeconds Int?
+  source          String    @default("TELEGRAM_BOT")
+  deviceType      String?
+  browser         String?
+  ipAddress       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([pageName])
+  @@index([entryTime])
+}
+
+model CategoryActivity {
+  id              Int       @id @default(autoincrement())
+  userId          BigInt?
+  username        String?
+  sessionId       String?
+  categoryId      Int?
+  categoryName    String?
+  entryTime       DateTime  @default(now())
+  exitTime        DateTime?
+  durationSeconds Int?
+  productsViewed  Int       @default(0)
+  source          String    @default("TELEGRAM_BOT")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([categoryId])
+  @@index([entryTime])
+}
+
+model AdminNotification {
+  id              Int      @id @default(autoincrement())
+  type            String
+  orderId         Int
+  title           String
+  message         String
+  metadata        String?
+  status          String   @default("DELIVERED")
+  deliveryChannel String
+  recipientId     String?
+  retryCount      Int      @default(0)
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([type])
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AdminConfig {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+}
+
+model OtpVerification {
+  id             Int       @id @default(autoincrement())
+  phoneNumber    String
+  otpCode        String
+  telegramChatId String?
+  status         String    @default("PENDING")
+  expiresAt      DateTime
+  usedAt         DateTime?
+  attemptCount   Int       @default(0)
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([phoneNumber])
+  @@index([otpCode])
+  @@index([status])
+  @@index([expiresAt])
+}
