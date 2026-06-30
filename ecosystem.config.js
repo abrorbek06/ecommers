@@ -36,7 +36,7 @@ module.exports = {
       user: 'node',
       host: 'your-server.com',
       ref: 'origin/main',
-      repo: 'git@github.com:username/sales-bot.git',
+      repo: 'git@github.com:abrorbek06/ecommers.git',
       path: '/var/www/sales-bot',
       'pre-deploy-local': '',
       'post-deploy': 'npm install && npm run build && npx prisma generate && npx prisma migrate deploy && pm2 reload ecosystem.config.js --env production',
