@@ -153,11 +153,11 @@ const HomePage = () => {
   return (
     <div className="space-y-6">
       {/* Hero Banner */}
-      <HeroBanner
+      {/* <HeroBanner
         title="BYD avtomobillari uchun asl ehtiyot qismlar"
         subtitle="Eng yaxshi narxlar va tezkor yetkazib berish kafolati bilan"
         badge="Reklama"
-      />
+      /> */}
 
       {/* Category Shortcuts */}
       {/* <CategoryShortcuts language={language as 'uz' | 'ru'} /> */}
