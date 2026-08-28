@@ -29,7 +29,6 @@ export function HeroBanner({ title, subtitle, image, link = '/catalog', badge = 
               to={link}
               className="inline-flex items-center space-x-2 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
             >
-              <span>Katalogga o'tish</span>
               <ChevronRight className="w-5 h-5" />
             </Link>
           </div>
